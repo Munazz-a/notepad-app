@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MyNotes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <!-- CSS -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <!-- JS -->
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+
+    <script>
+      let quill;
+
+      window.addEventListener('DOMContentLoaded', () => {
+        quill = new Quill('#content', {
+          theme: 'snow',
+          modules: {
+            toolbar: false
+          }
+        });
+      });
+    </script>
+
+  </head>
+
+  <body class="bg-cover bg-center bg-no-repeat" style="background-image: url('./img/Notepad\ web\ app.jpg');">
+    <!-- Navbar -->
+    <header class="flex justify-between items-center px-6 py-4 bg-white shadow">
+    <div class="text-xl font-bold text-[#1C2E4A]">🧠 MyNotes</div>
+    <nav>
+      <a href="/about" class="text-gray-700 hover:text-[#1C2E4A] font-medium">About Us</a>
+    </nav>
+  </header>
+
+    <!-- Main Layout -->
+    <div class="flex min-h-screen bg-[url('/static/bg2.png')] bg-center bg-no-repeat bg-cover">
+      <!-- Sidebar -->
+      <aside class="w-1/4 bg-[#12264F]/60 p-6 text-white">
+        <button id="createNoteBtn" class="w-full bg-white text-[#12264F] font-semibold py-2 px-4 rounded mb-6 shadow hover:bg-gray-100">Create Note</button>
+        <ul id="noteList" class="space-y-4">
+          <!-- Lists be here -->
+        </ul>
+      </aside>
+
+      <!-- Editor Section -->
+      <main class="flex-1 bg-white/50 p-10">
+        <!-- Editor Toolbar -->
+        <div class="flex justify-between items-center mb-4">
+        <div class="space-x-3">
+          <button onclick="quill.format('bold', true)" class="font-bold">B</button>
+          <button onclick="quill.format('italic', true)" class="italic">I</button>
+          <button onclick="quill.format('underline', true)" class="underline">U</button>
+          <span>|</span>
+          <button onclick="quill.format('align', 'center')"><i class="bi bi-text-center"></i></button>
+          <button onclick="quill.format('align', 'justify')"><i class="bi bi-justify"></i></button>
+          <button onclick="quill.format('align', 'left')"><i class="bi bi-justify-left"></i></button>
+          <button onclick="quill.format('align', 'right')"><i class="bi bi-justify-right"></i></button>
+          <button onclick="quill.format('list', 'bullet')"><i class="bi bi-list-ul"></i></button>
+          <span>|</span>
+          <button onclick="quill.format('background', 'yellow')"><i class="bi bi-highlighter"></i></button>
+          <button onclick="insertImage()"><i class="bi bi-image"></i></button>
+        </div>
+          <button id="dltBtn" class="bg-red-400 text-white px-4 py-1 rounded hover:bg-red-600">Delete</button>
+        </div>
+
+        <!-- Editor Area -->
+        <div>
+          <input id="title" type="text" placeholder="Add a title" class="w-full text-2xl font-bold outline-none border-b border-gray-300 mb-4 p-2 bg-transparent" />
+          <div contenteditable="true" id="content" data-placeholder="Start writing your note..." class="w-full h-[80vh] p-4 text-lg bg-transparent outline-none resize-none"></div>
+        </div>
+      </main>
+    </div>
+    
+  </body>
+
+  <script>
+      function insertImage() {
+        const url = prompt("Enter Image URL:");
+        if (url) {
+          const range = quill.getSelection();
+          if (range) {
+            quill.insertEmbed(range.index, 'image', url);
+          }
+        }
+      }
+
+
+    const notes = [];
+    let currentNote = null;
+    let thisIndex = notes.length-1;
+
+    const noteList = document.getElementById('noteList');
+    const titleInput = document.getElementById('title');
+    const contentInput = document.getElementById('content');
+    const createNoteBtn = document.getElementById('createNoteBtn');
+    const dltBtn = document.getElementById('dltBtn');
+
+    createNoteBtn.addEventListener('click', async() => {
+      try{
+        const response = await fetch('/api/notePad',{
+          method : 'POST',
+          headers : {
+            'content-Type' : 'application/json'
+          },
+          body : JSON.stringify({
+            li : 'New Note',
+            title : '',
+            content : ''
+          })
+        })
+        const result = await response.json();
+        console.log('Note Saved: ', result);
+      const li = document.createElement('li');
+      li.textContent = 'New note';
+      li.className = 'w-full bg-white text-[#12264F] font-semibold py-2 px-4 rounded mb-6 shadow';
+
+      li.addEventListener('dblclick', () => {
+        li.contentEditable = true;
+        li.focus();
+      });
+
+      noteList.appendChild(li);
+      li.focus();
+
+      notes.push({
+      _id: result._id,
+      li :'',
+      title : '',
+      content : ''
+    });
+    
+    
+    const index = notes.length - 1;
+
+    li.addEventListener('click', async () => {
+  if (currentNote !== null) {
+    // Save current content before switching
+    notes[currentNote].content = quill.root.innerHTML.trim();
+    await fetch(`/api/notePad/${notes[currentNote]._id}`, {
+      method: 'PUT',
+      headers: { 'content-Type': 'application/json' },
+      body: JSON.stringify({ content: notes[currentNote].content })
+    });
+  }
+
+  // Switch to new note
+    currentNote = index;
+    titleInput.value = notes[index].title;
+    quill.root.innerHTML = notes[index].content;
+
+    setTimeout(() => {
+        notes[currentNote].content = '';
+      }, 0);
+  });
+  
+
+
+    li.addEventListener('blur', async() => {
+      li.contentEditable = false;
+      const updateLi = li.textContent.trim();
+      notes[index].li = updateLi;
+
+      try{
+        await fetch(`/api/notePad/${notes[currentNote]._id}`, {
+          method : 'PUT',
+          headers : {
+            'content-Type' : 'application/json'
+          },
+          body : JSON.stringify({
+            li : updateLi
+          })
+        })
+      } catch (err){
+        console.log('Failed to update li : ', err);
+      }
+    })
+    } catch(err){
+        console.log('Error saving note : POST method');
+    }
+  })
+
+  dltBtn.addEventListener('click', async() => {
+    if (currentNote !== null) {
+    await deleteNote(notes[currentNote]._id, currentNote);
+    console.log('Note deleted!!');
+    }
+    })
+
+
+    titleInput.addEventListener('blur', async() => {
+      if(currentNote !== null){
+        notes[currentNote].title = titleInput.value.trim();
+
+        try{
+          await fetch(`/api/notePad/${notes[currentNote]._id}`,{
+            method : 'PUT',
+            headers : {
+              'content-Type' : 'application/json'
+            },
+            body : JSON.stringify({
+              title : notes[currentNote].title
+            })
+          })
+        } catch(err){
+            console.log('Failed to update title : ', err);
+        }
+      }
+    })
+    
+
+    titleInput.addEventListener('keydown', (event) => {
+      if(event.key === 'Enter'){
+        event.preventDefault();
+        contentInput.focus();
+      }
+    })
+
+    contentInput.addEventListener('blur', async() => {
+      if(currentNote !== null){
+        notes[currentNote].content = quill.root.innerHTML;
+
+        try{
+        await fetch(`/api/notePad/${notes[currentNote]._id}`,{
+          method : 'PUT',
+          headers : {
+            'content-Type' : 'application/json'
+          },
+          body : JSON.stringify({
+            content : notes[currentNote].content
+          })
+        })
+        } catch (err){
+          console.log('Failed to update content : ', err);
+        }
+      }
+    })
+  
+  // Fetching the notes
+
+  window.addEventListener('DOMContentLoaded', async() => {
+    try{
+    const response = await fetch('/api/notePad/all');
+    const notesFromDb = await response.json();
+
+    notesFromDb.forEach((noteData, index) => {
+      const li = document.createElement('li');
+      li.textContent = noteData.li || 'New Note';
+      li.className = 'w-full bg-white text-[#12264F] font-semibold py-2 px-4 rounded mb-6 shadow';
+      
+      noteList.appendChild(li);
+
+      notes.push({
+        _id: noteData._id,
+        li : noteData.li || '',
+        title : noteData.title || '',
+        content : noteData.content || ''
+      });
+
+      li.addEventListener('click', () => {
+      currentNote = index;
+      titleInput.value = notes[index].title;
+      quill.root.innerHTML = notes[index].content;
+      });
+
+      li.addEventListener('dblclick', () => {
+        li.contentEditable = true;
+        li.focus();
+      });
+
+
+      li.addEventListener('blur', async() => {
+      li.contentEditable = false;
+      const updateLi = li.textContent.trim();
+      notes[index].li = updateLi;
+
+      try{
+        await fetch(`/api/notePad/${notes[currentNote]._id}`, {
+          method : 'PUT',
+          headers : {
+            'content-Type' : 'application/json'
+          },
+          body : JSON.stringify({
+            li : updateLi
+          })
+        })
+      } catch (err){
+        console.log('Failed to update li : ', err);
+      }
+    })
+    })
+    if (notes.length > 0) {
+      currentNote = 0;
+      titleInput.value = notes[0].title;
+      quill.root.innerHTML = notes[0].content;
+    }
+
+  } catch(err){
+    console.log('Failed to fetch notes: ', err);
+  }
+  })
+
+  // Deleting from DB
+    async function deleteNote(id, index){
+      try{
+        const res = await fetch(`/api/notePad/${id}`,{
+          method : 'DELETE'
+        });
+        if(res.ok){
+          noteList.removeChild(noteList.children[index]);
+          notes.splice(index, 1);
+          currentNote = null;
+          titleInput.value = '';
+          quill.root.innerHTML = '';
+          console.log('note deleted from DB and UI');
+        } else {
+          console.log('Failed to delete note from DB and UI')
+        }
+      }
+      catch(err){
+        console.error('Error while deleting from DB and UI: ', err);
+      }
+    }
+
+  </script>
+
+</html>

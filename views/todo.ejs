@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>To-do List</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chewy&family=Coiny&family=Limelight&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Petit+Formal+Script&family=Pirata+One&family=Red+Hat+Text:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+
+  <style>
+  .petit-formal-script-regular {
+    font-family: "Petit Formal Script", cursive;
+    font-weight: 400;
+    font-style: normal;
+  }
+ </style>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: '#12264F',
+          },
+          fontFamily: {
+          sans: ['Inter', 'sans-serif']
+        }
+        }
+      }
+    }
+  </script>
+
+</head>
+
+<body class="min-h-screen bg-[url('/static/bg.png')] bg-cover bg-center bg-no-repeat">
+
+  <!-- Navbar -->
+  <header class="flex justify-between items-center px-6 py-4 bg-white shadow">
+    <div class="text-xl font-bold text-[#1C2E4A]">🧠 MyNotes</div>
+    <nav>
+      <a href="/about" class="text-gray-700 hover:text-[#1C2E4A] font-medium">About Us</a>
+    </nav>
+  </header>
+
+  <!-- To-do Container -->
+   
+  <p class="petit-formal-script-regular text-center text-white text-navy text-xl font-bold m-20 text-lg text-[#1C2E4A]">
+    Stay organized and focused — manage your daily tasks with NotePad.
+  </p>
+
+  <div class="bg-white/30 backdrop-blur-lg w-full max-w-md p-6 rounded-xl shadow-md border border-gray-200 mx-auto mt-20">
+    <h1 class="text-2xl font-bold text-navy mb-4 text-center">My To-do List</h1>
+
+    <!-- Input Row -->
+    <div class="flex items-center gap-2 mb-6">
+      <input
+        id="taskInput"
+        type="text"
+        placeholder="Add a new task..."
+        class="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy"
+      />
+      <button id="addTaskButton" class="bg-navy text-white px-4 py-2 rounded-lg hover:bg-navy/90">
+        Add
+      </button>
+    </div>
+
+    <!-- Task List -->
+    <ul id = "taskList" class = "space-y-4">
+      <!-- Tasks will be dynamically added here -->
+  </div>
+
+</body>
+
+<script>
+    const addTaskButton = document.getElementById('addTaskButton');
+    const taskInput = document.getElementById('taskInput');
+    const taskList = document.getElementById('taskList');
+
+    addTaskButton.addEventListener('click', async() =>{
+      const taskText = taskInput.value.trim();
+      console.log(taskText);
+      if(taskText){
+        try{
+          const response = await fetch('/api/todo', {
+            method : 'POST',
+            headers : {
+              'content-type' : 'application/json'
+            },
+            body : JSON.stringify({ 
+              task : taskText,
+              completed: false
+            })
+          });
+          const dataTodo = await response.json();
+          console.log("dataTodo task added");
+        const taskItem = document.createElement('li');
+        taskItem.className = 'flex items-center justify-between bg-white p-4 rounded-lg shadow hover:bg-gray-50 transition';
+        taskItem.innerHTML = `
+          <input type = "checkbox" class = "accent-navy w-4 h-4">
+          <span class = "text-navy"> ${taskText} </span>
+          <button class = "text-red-400 hover:text-red-600" onclick="parentElement.remove()"> &times; </button>
+        `
+        taskList.appendChild(taskItem);
+        taskInput.value = '';
+        } catch (error) {
+          console.log('Error adding task:', error);
+        }
+      }
+    });
+
+    // Fetch existing tasks from the server
+    window.addEventListener('DOMContentLoaded', async () => {
+      try{
+        const response = await fetch('/api/todo/all');
+        const tasks = await response.json();
+        tasks.forEach(task => {
+          const taskItem = document.createElement('li');
+          taskItem.className = 'flex items-center justify-between bg-white p-4 rounded-lg shadow hover:bg-gray-50 transition';
+          taskItem.innerHTML = `
+            <input type = "checkbox" class = "accent-navy w-4 h-4" ${task.completed ? 'checked' : ''} onchange="toggleCompleted('${task._id}', this.checked)">
+            <span class = "text-navy"> ${task.task} </span>
+            <button class = "text-red-400 hover:text-red-600" onclick="deleteTask('${task._id}', this)"> &times; </button>
+          `;
+          taskList.appendChild(taskItem);
+        })
+      } catch (error) {
+        console.log('Error fetching tasks:', error);
+      }
+    })
+
+    // Deleting from DB
+    async function deleteTask(id, button){
+      try{
+        const res = await fetch(`/api/todo/${id}`,{
+          method : 'DELETE'
+        });
+        if(res.ok){
+          button.parentElement.remove();
+          console.log('Task deleted from DB and UI');
+        } else {
+          console.log('Failed to delete task from DB and UI')
+        }
+      }
+      catch(err){
+        console.error('Error while deleting from DB and UI: ', err);
+      }
+    }
+
+    // checkBox
+    async function toggleCompleted(id, isChecked){
+      try{
+        const res = await fetch(`/api/todo/${id}`, {
+          method : 'PATCH',
+          headers : { 'Content-Type' : 'application/json'},
+          body : JSON.stringify({ completed : isChecked})
+        });
+        if(res.ok){
+          console.log(`Todo ${id} markes as ${isChecked ? 'completed' : 'not completed'}`)
+        } else {
+          console.error('Failed to update status')
+        }
+      } catch(err){
+        console.error('Error updating status : ', err)
+      }
+    }
+</script>
+</html>
