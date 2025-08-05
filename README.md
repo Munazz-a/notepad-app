@@ -1,7 +1,7 @@
 # 🧠 Notepad Web App
 
-A rich-text notepad web application built with **Quill.js**, **Express.js**, **MongoDB**, and **Tailwind CSS**. Users can create, edit, delete, and persist notes with support for text formatting and images.
-
+A rich-text notepad and todo web application built with Quill.js, Express.js, MongoDB, and Tailwind CSS.
+The application consists of two main sections: a Note-taking app with rich-text formatting (including images, bold, italic, etc.) and a To-do list for task management. The frontend was designed with the help of AI-generated layouts for an enhanced user experience. Users can seamlessly create, edit, delete, and persist both notes and todos.
 ## ✨ Features
 
 - Create new notes with editable titles
